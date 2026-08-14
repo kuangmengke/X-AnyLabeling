@@ -1464,8 +1464,58 @@ class UltralyticsDialog(QDialog):
                         self.progress_bar.setFormat(
                             f"{self.current_epochs}/{self.total_epochs}"
                         )
+                        # Update best model info from results.csv
+                        self._update_best_epoch_info(rows)
             except Exception as e:
                 logger.warning(f"Failed to read results.csv: {e}")
+
+    def _update_best_epoch_info(self, rows):
+        """Find and display the best epoch from results.csv.
+
+        Uses the mAP50-95 column (detect/segment/obb/pose), falling back to
+        accuracy_top1 (classify) or precision if unavailable.
+        """
+        try:
+            if not hasattr(self, "best_epoch_label"):
+                return
+
+            header = rows[0]
+            col_idx = None
+            metric_name = "mAP50-95"
+            for key in ("mAP50-95", "accuracy_top1", "precision"):
+                for i, col in enumerate(header):
+                    if key in col:
+                        col_idx, metric_name = i, key
+                        break
+                if col_idx is not None:
+                    break
+
+            if col_idx is None:
+                self.best_epoch_label.setText(self.tr("Best: --"))
+                return
+
+            best_epoch, best_value = 0, float("-inf")
+            for row in rows[1:]:
+                if len(row) <= col_idx or not row[0].strip():
+                    continue
+                try:
+                    value = float(row[col_idx])
+                    epoch = int(float(row[0]))
+                except ValueError:
+                    continue
+                if value > best_value:
+                    best_value, best_epoch = value, epoch
+
+            if best_epoch > 0 and best_value != float("-inf"):
+                self.best_epoch_label.setText(
+                    self.tr("Best: Epoch {} ({}={:.3f})").format(
+                        best_epoch, metric_name, best_value
+                    )
+                )
+            else:
+                self.best_epoch_label.setText(self.tr("Best: --"))
+        except Exception as e:
+            logger.warning(f"Failed to parse best epoch: {e}")
 
     def update_training_images(self):
         if not self.current_project_path:
@@ -1554,6 +1604,7 @@ class UltralyticsDialog(QDialog):
             self.current_epochs = 0
             self.progress_bar.setValue(0)
             self.progress_bar.setFormat(f"0/{self.total_epochs}")
+            self.best_epoch_label.setText(self.tr("Best: --"))
             self.update_training_status_display()
             self.start_training_button.setVisible(False)
             self.stop_training_button.setVisible(True)
@@ -1628,6 +1679,12 @@ class UltralyticsDialog(QDialog):
         self.progress_bar.setStyleSheet(get_progress_bar_style())
         progress_layout.addWidget(self.progress_bar)
         status_layout.addLayout(progress_layout)
+
+        self.best_epoch_label = QLabel(self.tr("Best: --"))
+        self.best_epoch_label.setStyleSheet(
+            "font-weight: bold; color: #28a745;"
+        )
+        status_layout.addWidget(self.best_epoch_label)
         parent_layout.addWidget(status_group)
 
     def clear_training_logs(self):
