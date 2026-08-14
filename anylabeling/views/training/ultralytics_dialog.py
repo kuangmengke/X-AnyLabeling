@@ -783,8 +783,13 @@ class UltralyticsDialog(QDialog):
         self.config_widgets["amp"] = CustomCheckBox("AMP")
         self.config_widgets["amp"].setChecked(DEFAULT_TRAINING_CONFIG["amp"])
         strat_layout.addWidget(self.config_widgets["amp"])
-        self.config_widgets["multi_scale"] = CustomCheckBox("Multi Scale")
-        self.config_widgets["multi_scale"].setChecked(
+        strat_layout.addWidget(QLabel("Multi Scale:"))
+        self.config_widgets["multi_scale"] = CustomDoubleSpinBox()
+        self.config_widgets["multi_scale"].setDecimals(2)
+        self.config_widgets["multi_scale"].setRange(0.0, 1.0)
+        self.config_widgets["multi_scale"].setSingleStep(0.05)
+        self.config_widgets["multi_scale"].setSpecialValueText("Off")
+        self.config_widgets["multi_scale"].setValue(
             DEFAULT_TRAINING_CONFIG["multi_scale"]
         )
         strat_layout.addWidget(self.config_widgets["multi_scale"])

@@ -65,7 +65,7 @@ DEFAULT_TRAINING_CONFIG = {
     "optimizer": "auto",
     "cos_lr": False,
     "amp": True,
-    "multi_scale": False,
+    "multi_scale": 0.0,
     "lr0": 0.01,
     "lrf": 0.01,
     "momentum": 0.937,
