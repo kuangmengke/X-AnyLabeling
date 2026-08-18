@@ -90,6 +90,7 @@ from .widgets import (
     LabelModifyDialog,
     GroupIDModifyDialog,
     OverviewDialog,
+    LabelReviewDialog,
     Popup,
     SearchBar,
     ToolBar,
@@ -1009,6 +1010,15 @@ class LabelingWidget(LabelDialog):
             icon="overview",
             tip=self.tr("Show annotations statistics"),
         )
+        label_review = action(
+            self.tr("Label Review"),
+            self.label_review,
+            None,
+            icon="overview",
+            tip=self.tr(
+                "Find images by label and review/verify annotations"
+            ),
+        )
         save_crop = action(
             self.tr("Save Cropped Image"),
             lambda: utils.save_crop(self),
@@ -1801,6 +1811,7 @@ class LabelingWidget(LabelDialog):
             paste=paste,
             toggle_shape_lock=toggle_shape_lock,
             overview=overview,
+            label_review=label_review,
             save_visualization_image=save_visualization_image,
             save_visualization_video=save_visualization_video,
             undo_last_point=undo_last_point,
@@ -2071,6 +2082,7 @@ class LabelingWidget(LabelDialog):
             self.menus.tool,
             (
                 overview,
+                label_review,
                 None,
                 save_crop,
                 save_visualization_image,
@@ -3290,6 +3302,20 @@ class LabelingWidget(LabelDialog):
     def overview(self):
         if self.filename:
             OverviewDialog(parent=self)
+
+    def label_review(self):
+        if self.filename:
+            if (
+                not hasattr(self, "label_review_dialog")
+                or self.label_review_dialog is None
+            ):
+                self.label_review_dialog = LabelReviewDialog(self)
+            else:
+                self.label_review_dialog.refresh_files()
+                self.label_review_dialog.scan_all()
+            self.label_review_dialog.show()
+            self.label_review_dialog.raise_()
+            self.label_review_dialog.activateWindow()
 
     def digit_shortcut_manager(self):
         digit_shortcut_dialog = DigitShortcutDialog(parent=self)
