@@ -7,6 +7,7 @@ from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QBrush, QColor
 from PyQt6.QtWidgets import (
+    QApplication,
     QSpinBox,
     QFileDialog,
     QHBoxLayout,
@@ -156,6 +157,10 @@ class OverviewDialog(QtWidgets.QDialog):
         self.export_button = QPushButton(self.tr("Export"))
         self.export_button.setProperty("class", "secondary-button")
 
+        # Add copy button for copying the current table as Markdown
+        self.copy_md_button = QPushButton(self.tr("Copy Markdown"))
+        self.copy_md_button.setProperty("class", "secondary-button")
+
         # Add toggle button to switch between label_infos and shape_infos
         self.toggle_button = QPushButton(self.tr("Shape"))
         self.toggle_button.setProperty("class", "secondary-button")
@@ -169,12 +174,16 @@ class OverviewDialog(QtWidgets.QDialog):
         range_and_export_layout.addLayout(range_layout)
         range_and_export_layout.addStretch(1)
         range_and_export_layout.addWidget(
+            self.copy_md_button, 0, Qt.AlignmentFlag.AlignRight
+        )
+        range_and_export_layout.addWidget(
             self.export_button, 0, Qt.AlignmentFlag.AlignRight
         )
 
         layout.addLayout(range_and_export_layout)
 
         self.export_button.clicked.connect(self.export_to_csv)
+        self.copy_md_button.clicked.connect(self.copy_to_markdown)
 
         self.setStyleSheet(_get_overview_style())
 
@@ -501,6 +510,56 @@ class OverviewDialog(QtWidgets.QDialog):
                 icon=new_icon_path("error", "svg"),
             )
             popup.show_popup(self.parent)
+
+    def copy_to_markdown(self):
+        """Copy the currently displayed table to the clipboard as Markdown."""
+        try:
+            cols = self.table.columnCount()
+            rows = self.table.rowCount()
+            if cols == 0 or rows == 0:
+                return
+
+            def md_escape(value):
+                return (
+                    str(value)
+                    .replace("|", "\\|")
+                    .replace("\r", " ")
+                    .replace("\n", " ")
+                )
+
+            headers = []
+            for c in range(cols):
+                header_item = self.table.horizontalHeaderItem(c)
+                headers.append(
+                    md_escape(header_item.text()) if header_item else ""
+                )
+
+            lines = ["| " + " | ".join(headers) + " |"]
+            lines.append("| " + " | ".join("---" for _ in headers) + " |")
+            for r in range(rows):
+                cells = []
+                for c in range(cols):
+                    item = self.table.item(r, c)
+                    cells.append(md_escape(item.text() if item else ""))
+                lines.append("| " + " | ".join(cells) + " |")
+
+            QApplication.clipboard().setText("\n".join(lines))
+
+            popup = Popup(
+                self.tr("Markdown table copied to clipboard!"),
+                self,
+                msec=3000,
+                icon=new_icon_path("copy-green", "svg"),
+            )
+            popup.show_popup(self, popup_height=65, position="center")
+        except Exception as e:
+            logger.error(f"Error copying table as markdown: {e}")
+            popup = Popup(
+                self.tr("Failed to copy markdown table."),
+                self,
+                icon=new_icon_path("error", "svg"),
+            )
+            popup.show_popup(self)
 
     def toggle_info(self):
         """
