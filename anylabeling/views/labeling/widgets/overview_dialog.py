@@ -161,6 +161,10 @@ class OverviewDialog(QtWidgets.QDialog):
         self.copy_md_button = QPushButton(self.tr("Copy Markdown"))
         self.copy_md_button.setProperty("class", "secondary-button")
 
+        # Add export button for exporting dataset YAML (training config)
+        self.export_yaml_button = QPushButton(self.tr("Export YAML"))
+        self.export_yaml_button.setProperty("class", "secondary-button")
+
         # Add toggle button to switch between label_infos and shape_infos
         self.toggle_button = QPushButton(self.tr("Shape"))
         self.toggle_button.setProperty("class", "secondary-button")
@@ -177,6 +181,9 @@ class OverviewDialog(QtWidgets.QDialog):
             self.copy_md_button, 0, Qt.AlignmentFlag.AlignRight
         )
         range_and_export_layout.addWidget(
+            self.export_yaml_button, 0, Qt.AlignmentFlag.AlignRight
+        )
+        range_and_export_layout.addWidget(
             self.export_button, 0, Qt.AlignmentFlag.AlignRight
         )
 
@@ -184,6 +191,7 @@ class OverviewDialog(QtWidgets.QDialog):
 
         self.export_button.clicked.connect(self.export_to_csv)
         self.copy_md_button.clicked.connect(self.copy_to_markdown)
+        self.export_yaml_button.clicked.connect(self.export_to_yaml)
 
         self.setStyleSheet(_get_overview_style())
 
@@ -510,6 +518,61 @@ class OverviewDialog(QtWidgets.QDialog):
                 icon=new_icon_path("error", "svg"),
             )
             popup.show_popup(self.parent)
+
+    def export_to_yaml(self):
+        """Export the project labels as an Ultralytics dataset YAML."""
+        try:
+            default_dir = (
+                os.path.dirname(self.image_file_list[0])
+                if self.image_file_list
+                else ""
+            )
+            default_path = os.path.join(default_dir, "dataset.yaml")
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                self.tr("Export Dataset YAML"),
+                default_path,
+                "YAML Files (*.yaml *.yml)",
+            )
+            if not file_path:
+                return
+
+            label_infos, _ = self.get_total_infos(
+                1, len(self.image_file_list)
+            )
+            labels = [
+                row[0] for row in label_infos[1:-1]
+            ]  # Exclude header and total
+            if not labels:
+                popup = Popup(
+                    self.tr("No labels found, nothing to export."),
+                    self,
+                    icon=new_icon_path("error", "svg"),
+                )
+                popup.show_popup(self)
+                return
+
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(f"nc: {len(labels)}\n")
+                f.write("names:\n")
+                for i, label in enumerate(labels):
+                    f.write(f"  {i}: {label}\n")
+
+            popup = Popup(
+                self.tr(f"Dataset YAML exported to:\n{file_path}"),
+                self,
+                msec=5000,
+                icon=new_icon_path("copy-green", "svg"),
+            )
+            popup.show_popup(self, popup_height=65, position="center")
+        except Exception as e:
+            logger.error(f"Error exporting dataset yaml: {e}")
+            popup = Popup(
+                self.tr("Failed to export dataset YAML."),
+                self,
+                icon=new_icon_path("error", "svg"),
+            )
+            popup.show_popup(self)
 
     def copy_to_markdown(self):
         """Copy the currently displayed table to the clipboard as Markdown."""
