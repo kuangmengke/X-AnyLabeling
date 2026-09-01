@@ -72,6 +72,7 @@ class SettingsDialog(QtWidgets.QDialog):
         super().__init__(parent)
         self._controller = controller
         self._bindings: dict[str, EditorBinding] = {}
+        self._field_rows: dict[str, QtWidgets.QWidget] = {}
         self._nav_item_widgets: dict[
             str, tuple[QtWidgets.QLabel, QtWidgets.QLabel]
         ] = {}
@@ -796,6 +797,7 @@ class SettingsDialog(QtWidgets.QDialog):
     def _render_primary(self, primary: str) -> None:
         self._active_primary = primary
         self._bindings.clear()
+        self._field_rows.clear()
         self._shortcut_editor_roots = []
         self.header_title.setText(self._display_primary_text(primary))
         self._clear_layout(self.content_body_layout)
@@ -1165,7 +1167,11 @@ class SettingsDialog(QtWidgets.QDialog):
         )
         editor.setRange(minimum, maximum)
         editor.setDecimals(max(0, field.decimals))
-        editor.setSingleStep(10 ** (-max(0, field.decimals)))
+        editor.setSingleStep(
+            field.single_step
+            if field.single_step is not None
+            else 10 ** (-max(0, field.decimals))
+        )
         editor.setFixedHeight(self._editor_height)
         editor.setFixedWidth(self._single_editor_width)
         editor.setStyleSheet(get_double_spinbox_style())
@@ -1476,6 +1482,7 @@ class SettingsDialog(QtWidgets.QDialog):
                 | QtCore.Qt.AlignmentFlag.AlignVCenter,
             )
             self.content_body_layout.addWidget(row)
+            self._field_rows[field.key] = row
             self._bindings[field.key] = EditorBinding(
                 field, setter, error_setter
             )
@@ -1485,6 +1492,25 @@ class SettingsDialog(QtWidgets.QDialog):
                 self._add_row_separator()
 
         self.content_body_layout.addStretch(1)
+
+    def show_field(self, key: str) -> None:
+        field = next(
+            (field for field in self._controller.fields if field.key == key),
+            None,
+        )
+        if field is None:
+            raise KeyError(key)
+        row = self._nav_items.index(field.primary)
+        if self.nav_list.currentRow() == row:
+            self._render_primary(field.primary)
+        else:
+            self.nav_list.setCurrentRow(row)
+        QtCore.QTimer.singleShot(0, lambda: self._scroll_to_field(key))
+
+    def _scroll_to_field(self, key: str) -> None:
+        row = self._field_rows.get(key)
+        if row is not None:
+            self.content_scroll.ensureWidgetVisible(row)
 
     def _render_shortcut_fields(self, fields: list[SettingField]) -> None:
         self._shortcut_fields_by_group = {}

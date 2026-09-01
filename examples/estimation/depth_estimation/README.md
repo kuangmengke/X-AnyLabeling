@@ -2,6 +2,8 @@
 
 Depth-estimation models estimate the relative distance from the camera for every pixel in an image.
 
+<img src=".data/annotated_depth_task.png" width="100%" />
+
 ## Depth Estimation Model
 
 X-AnyLabeling includes [Depth Anything V1](../../../anylabeling/configs/auto_labeling/depth_anything_vit_b.yaml) and [Depth Anything V2](../../../anylabeling/configs/auto_labeling/depth_anything_v2_vit_b.yaml).

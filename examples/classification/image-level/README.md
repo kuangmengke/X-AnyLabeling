@@ -4,13 +4,11 @@
 
 Image classification assigns labels to an entire image. X-AnyLabeling supports multiclass and multilabel classification.
 
-<img src=".data/classification.png" width="100%" />
-
-> **Multiclass classification** assigns exactly one class to each image.
+**Multiclass classification** assigns exactly one class to each image.
 
 <img src=".data/annotated_multiclass_example.png" width="100%" />
 
-> **Multilabel classification** allows each image to have multiple labels.
+**Multilabel classification** allows each image to have multiple labels.
 
 <img src=".data/annotated_multilabel_example.png" width="100%" />
 

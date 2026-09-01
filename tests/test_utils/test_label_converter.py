@@ -231,6 +231,58 @@ class TestLabelConverterObbBounds(unittest.TestCase):
             self.assertEqual(f.read(), "")
 
 
+class TestLabelConverterYoloExport(unittest.TestCase):
+
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp_dir.cleanup)
+        classes_file = os.path.join(self.temp_dir.name, "classes.txt")
+        with open(classes_file, "w", encoding="utf-8") as f:
+            f.write("person\n")
+        self.converter = LabelConverter(classes_file=classes_file)
+
+    def _export(self, mode, shape):
+        label_file = os.path.join(self.temp_dir.name, f"{mode}.json")
+        output_file = os.path.join(self.temp_dir.name, f"{mode}.txt")
+        with open(label_file, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "imagePath": "image.jpg",
+                    "imageWidth": 100,
+                    "imageHeight": 50,
+                    "shapes": [shape],
+                },
+                f,
+            )
+        self.converter.custom_to_yolo(label_file, output_file, mode)
+        with open(output_file, "r", encoding="utf-8") as f:
+            return f.read()
+
+    def test_hbb_export(self):
+        output = self._export(
+            "hbb",
+            {
+                "label": "person",
+                "shape_type": "rectangle",
+                "points": [[10, 10], [90, 10], [90, 40], [10, 40]],
+            },
+        )
+
+        self.assertEqual(output, "0 0.500000 0.500000 0.800000 0.600000\n")
+
+    def test_seg_export(self):
+        output = self._export(
+            "seg",
+            {
+                "label": "person",
+                "shape_type": "polygon",
+                "points": [[0, 0], [100, 0], [100, 50]],
+            },
+        )
+
+        self.assertEqual(output, "0 0.0 0.0 0.99 0.0 0.99 0.98\n")
+
+
 class TestLabelConverterMaskExport(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -250,6 +302,25 @@ class TestLabelConverterMaskExport(unittest.TestCase):
             json.dump(data, f)
         return label_file
 
+    def _overlapping_shapes(self, car_first=False):
+        road = {
+            "label": "road",
+            "shape_type": "polygon",
+            "points": [[0, 0], [3, 0], [3, 2], [0, 2]],
+        }
+        car = {
+            "label": "car",
+            "shape_type": "polygon",
+            "points": [[1, 1], [2, 1], [2, 2], [1, 2]],
+        }
+        return [car, road] if car_first else [road, car]
+
+    def _export_mask(self, shapes, mapping_table):
+        label_file = self._write_label_file(shapes)
+        output_file = os.path.join(self.temp_dir.name, "mask.png")
+        self.converter.custom_to_mask(label_file, output_file, mapping_table)
+        return output_file
+
     def test_custom_to_mask_writes_blank_mask_for_empty_labels(self):
         label_file = self._write_label_file([])
         output_file = os.path.join(self.temp_dir.name, "mask.png")
@@ -262,6 +333,107 @@ class TestLabelConverterMaskExport(unittest.TestCase):
         self.assertIsNotNone(mask)
         self.assertEqual(mask.shape, (3, 4))
         self.assertTrue(np.all(mask == 0))
+
+    def test_custom_to_mask_uses_annotation_layer_order(self):
+        mapping_table = {
+            "type": "grayscale",
+            "colors": {"road": 1, "car": 2},
+        }
+
+        output_file = self._export_mask(
+            self._overlapping_shapes(), mapping_table
+        )
+
+        mask = cv2.imread(output_file, cv2.IMREAD_UNCHANGED)
+        self.assertEqual(mask[0, 0], 1)
+        self.assertEqual(mask[1, 1], 2)
+
+    def test_custom_to_mask_uses_label_priority_before_layer_order(self):
+        mapping_table = {
+            "type": "grayscale",
+            "colors": {"road": 1, "car": 2},
+            "label_priority": {"road": 0, "car": 10},
+        }
+
+        output_file = self._export_mask(
+            self._overlapping_shapes(car_first=True), mapping_table
+        )
+
+        mask = cv2.imread(output_file, cv2.IMREAD_UNCHANGED)
+        self.assertEqual(mask[0, 0], 1)
+        self.assertEqual(mask[1, 1], 2)
+
+    def test_custom_to_mask_uses_layer_order_for_equal_priorities(self):
+        mapping_table = {
+            "type": "grayscale",
+            "colors": {"road": 1, "car": 2},
+            "label_priority": {"road": 5, "car": 5},
+        }
+
+        output_file = self._export_mask(
+            self._overlapping_shapes(car_first=True), mapping_table
+        )
+
+        mask = cv2.imread(output_file, cv2.IMREAD_UNCHANGED)
+        self.assertEqual(mask[1, 1], 1)
+
+    def test_custom_to_mask_applies_priority_to_rgb_output(self):
+        mapping_table = {
+            "type": "rgb",
+            "colors": {"road": [10, 20, 30], "car": [40, 50, 60]},
+            "label_priority": {"car": 10},
+        }
+
+        output_file = self._export_mask(
+            self._overlapping_shapes(car_first=True), mapping_table
+        )
+
+        mask = np.asarray(Image.open(output_file))
+        np.testing.assert_array_equal(mask[0, 0], [10, 20, 30])
+        np.testing.assert_array_equal(mask[1, 1], [40, 50, 60])
+
+    def test_custom_to_mask_rejects_invalid_label_priority(self):
+        label_file = self._write_label_file([])
+        output_file = os.path.join(self.temp_dir.name, "mask.png")
+
+        with self.assertRaisesRegex(
+            ValueError, "label_priority must be an object"
+        ):
+            self.converter.custom_to_mask(
+                label_file,
+                output_file,
+                {
+                    "type": "grayscale",
+                    "colors": {"cat": 1},
+                    "label_priority": ["cat"],
+                },
+            )
+
+        with self.assertRaisesRegex(
+            ValueError, "Unknown labels in label_priority: dog"
+        ):
+            self.converter.custom_to_mask(
+                label_file,
+                output_file,
+                {
+                    "type": "grayscale",
+                    "colors": {"cat": 1},
+                    "label_priority": {"dog": 1},
+                },
+            )
+
+        with self.assertRaisesRegex(
+            ValueError, "label_priority values must be integers"
+        ):
+            self.converter.custom_to_mask(
+                label_file,
+                output_file,
+                {
+                    "type": "grayscale",
+                    "colors": {"cat": 1},
+                    "label_priority": {"cat": True},
+                },
+            )
 
     def test_custom_image_to_empty_mask_uses_source_image_size(self):
         image_file = os.path.join(self.temp_dir.name, "image.png")

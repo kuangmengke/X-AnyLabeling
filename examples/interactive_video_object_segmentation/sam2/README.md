@@ -54,8 +54,6 @@ python3 anylabeling/app.py
 
 **Step 1:** Load the SAM 2 Video model
 
-![Load-Model](https://github.com/user-attachments/assets/8c3e0593-ccb5-45a8-bb61-73f4b9f5f82f)
-
 <details>
 <summary>Note: If the model fails to load due to network issues, please refer to the following settings.</summary>
 
@@ -132,8 +130,6 @@ b. Click the `Reset Tracker` button at the top of the screen to reset the tracke
 c. Reapply the prompts (Marks) as described earlier.
 
 Then, repeat the steps in **Step 0** and **Step 1**.
-
-![rename](https://github.com/user-attachments/assets/04707624-b13d-490f-a75d-7e35d5dee1c7)
 
 After completing all tasks, you can:
 - Use the `Tool` -> `Label Manager` option from the top menu to assign specific class names.

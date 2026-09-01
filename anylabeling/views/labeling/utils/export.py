@@ -117,6 +117,10 @@ def _show_yolo_export_error(parent, image_file, error):
             "configuration.\nPlease ensure that the bounding box label is "
             "listed under classes in the pose YAML file.",
         )
+    elif str(error):
+        message += "\n\n" + QCoreApplication.translate(
+            "LabelingWidget", "Reason: %s"
+        ) % str(error)
 
     msg_box = QtWidgets.QMessageBox(parent)
     msg_box.setIcon(QtWidgets.QMessageBox.Icon.Critical)
@@ -133,6 +137,77 @@ def _show_yolo_export_error(parent, image_file, error):
     )
     if image_path and image_path != loaded_image_path:
         parent.load_file(image_file)
+
+
+def _get_yolo_source_root(filename, last_open_dir):
+    source_root = osp.dirname(osp.abspath(filename))
+    if not last_open_dir:
+        return source_root
+
+    last_open_dir = osp.abspath(last_open_dir)
+    try:
+        if osp.commonpath((last_open_dir, source_root)) == last_open_dir:
+            return last_open_dir
+    except ValueError:
+        pass
+    return source_root
+
+
+def _validate_yolo_export_path(source_root, save_path):
+    if not save_path:
+        raise ValueError("Please select an export root directory.")
+
+    source_root = osp.realpath(source_root)
+    save_path = osp.realpath(save_path)
+    if osp.exists(save_path) and not osp.isdir(save_path):
+        raise ValueError("The export root path must be a directory.")
+
+    try:
+        common_path = osp.commonpath((source_root, save_path))
+    except ValueError:
+        return
+    if common_path == source_root:
+        raise ValueError(
+            "The export root directory cannot be the loaded image directory "
+            "or one of its subdirectories."
+        )
+    if common_path == save_path:
+        raise ValueError(
+            "The export root directory cannot contain the loaded image "
+            "directory."
+        )
+
+
+def _get_yolo_export_files(image_list, source_root, save_path):
+    export_files = []
+    label_destinations = {}
+    for image_file in image_list:
+        try:
+            relative_image_path = osp.relpath(image_file, source_root)
+        except ValueError:
+            relative_image_path = osp.basename(image_file)
+        if (
+            relative_image_path == osp.pardir
+            or relative_image_path.startswith(osp.pardir + osp.sep)
+        ):
+            relative_image_path = osp.basename(image_file)
+        relative_label_path = osp.splitext(relative_image_path)[0] + ".txt"
+        destination_key = osp.normcase(osp.normpath(relative_label_path))
+        if destination_key in label_destinations:
+            raise ValueError(
+                "Multiple images map to the same YOLO label file "
+                f"'{relative_label_path}':\n"
+                f"{label_destinations[destination_key]}\n{image_file}"
+            )
+        label_destinations[destination_key] = image_file
+        export_files.append(
+            (
+                image_file,
+                osp.join(save_path, relative_label_path),
+                osp.join(save_path, relative_image_path),
+            )
+        )
+    return export_files
 
 
 def export_yolo_annotation(self, mode):
@@ -186,6 +261,10 @@ def export_yolo_annotation(self, mode):
             return
         converter = LabelConverter(classes_file=self.classes_file)
 
+    source_root = _get_yolo_source_root(
+        self.filename, getattr(self, "last_open_dir", None)
+    )
+
     dialog = QtWidgets.QDialog(self)
     dialog.setWindowTitle(
         QCoreApplication.translate("LabelingWidget", "Export options")
@@ -207,9 +286,7 @@ def export_yolo_annotation(self, mode):
     path_input_layout.setSpacing(8)
 
     path_edit = QtWidgets.QLineEdit()
-    path_edit.setText(
-        osp.realpath(osp.join(osp.dirname(self.filename), "..", "labels"))
-    )
+    path_edit.setText(osp.realpath(osp.join(source_root, "..", "labels")))
     path_edit.setPlaceholderText(
         QCoreApplication.translate("LabelingWidget", "Select Export Directory")
     )
@@ -285,6 +362,15 @@ def export_yolo_annotation(self, mode):
     skip_empty_files = skip_empty_files_checkbox.isChecked()
     save_path = path_edit.text()
     image_list = self.image_list if self.image_list else [self.filename]
+
+    try:
+        _validate_yolo_export_path(source_root, save_path)
+        export_files = _get_yolo_export_files(
+            image_list, source_root, save_path
+        )
+    except ValueError as error:
+        _show_yolo_export_error(self, None, error)
+        return
 
     def get_label_file(image_file):
         label_file_name = osp.splitext(osp.basename(image_file))[0] + ".json"
@@ -409,13 +495,10 @@ def export_yolo_annotation(self, mode):
 
     current_image_file = None
     try:
-        for i, image_file in enumerate(image_list):
+        for i, (image_file, dst_file, image_dst) in enumerate(export_files):
             current_image_file = image_file
-            image_file_name = osp.basename(image_file)
-            dst_file_name = osp.splitext(image_file_name)[0] + ".txt"
-
             src_file = get_label_file(image_file)
-            dst_file = osp.join(save_path, dst_file_name)
+            os.makedirs(osp.dirname(dst_file), exist_ok=True)
 
             is_empty_file = converter.custom_to_yolo(
                 src_file,
@@ -426,7 +509,7 @@ def export_yolo_annotation(self, mode):
             )
 
             if save_images and not (skip_empty_files and is_empty_file):
-                image_dst = osp.join(save_path, image_file_name)
+                os.makedirs(osp.dirname(image_dst), exist_ok=True)
                 shutil.copy(image_file, image_dst)
 
             if skip_empty_files and is_empty_file and osp.exists(dst_file):

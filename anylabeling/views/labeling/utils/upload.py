@@ -21,6 +21,27 @@ from anylabeling.views.labeling.utils.style import *
 from anylabeling.views.labeling.utils.export import _check_filename_exist
 
 
+def _refresh_uploaded_file_items(self):
+    for index in range(self.file_list_widget.count()):
+        item = self.file_list_widget.item(index)
+        image_file = item.text()
+        label_file = osp.splitext(image_file)[0] + ".json"
+        if self.output_dir:
+            label_file = osp.join(self.output_dir, osp.basename(label_file))
+        check_state = (
+            Qt.CheckState.Checked
+            if osp.isfile(label_file)
+            else Qt.CheckState.Unchecked
+        )
+        item.setCheckState(check_state)
+        self._set_file_item_checked(item, self._label_file_checked(label_file))
+
+
+def _refresh_after_annotation_upload(self):
+    _refresh_uploaded_file_items(self)
+    self.load_file(self.filename)
+
+
 class UploadPPOCRThread(QThread):
     finished = pyqtSignal(bool, str)
 
@@ -213,8 +234,7 @@ def upload_vlm_r1_ovd_annotation(self):
         )
         popup.show_popup(self, popup_height=65, position="center")
 
-        # update and refresh the current canvas
-        self.load_file(self.filename)
+        _refresh_after_annotation_upload(self)
 
     except Exception as e:
         progress_dialog.close()
@@ -297,8 +317,7 @@ def upload_ppocr_annotation(self, mode):
     def on_upload_finished(success, error_msg):
         progress_dialog.close()
         if success:
-            # update and refresh the current canvas
-            self.load_file(self.filename)
+            _refresh_after_annotation_upload(self)
 
             popup = Popup(
                 self.tr(f"Uploading annotations successfully!"),
@@ -378,8 +397,7 @@ def upload_odvg_annotation(self):
     def on_upload_finished(success, error_msg):
         progress_dialog.close()
         if success:
-            # update and refresh the current canvas
-            self.load_file(self.filename)
+            _refresh_after_annotation_upload(self)
 
             popup = Popup(
                 self.tr(f"Uploading annotations successfully!"),
@@ -646,7 +664,7 @@ def upload_mmgd_annotation(self, LABEL_OPACITY):
                     item, label, rgb, LABEL_OPACITY
                 )
 
-        self.load_file(self.filename)
+        _refresh_after_annotation_upload(self)
 
     except Exception as e:
         progress_dialog.close()
@@ -745,8 +763,7 @@ def upload_mot_annotation(self, LABEL_OPACITY):
     def on_upload_finished(success, error_msg):
         progress_dialog.close()
         if success:
-            # update and refresh the current canvas
-            self.load_file(self.filename)
+            _refresh_after_annotation_upload(self)
 
             popup = Popup(
                 self.tr(f"Uploading annotations successfully!"),
@@ -941,8 +958,7 @@ def upload_mask_annotation(self, LABEL_OPACITY):
         )
         popup.show_popup(self, popup_height=65, position="center")
 
-        # update and refresh the current canvas
-        self.load_file(self.filename)
+        _refresh_after_annotation_upload(self)
 
     except Exception as e:
         progress_dialog.close()
@@ -1098,8 +1114,7 @@ def upload_dota_annotation(self):
         )
         popup.show_popup(self, popup_height=65, position="center")
 
-        # update and refresh the current canvas
-        self.load_file(self.filename)
+        _refresh_after_annotation_upload(self)
 
     except Exception as e:
         progress_dialog.close()
@@ -1168,8 +1183,7 @@ def upload_coco_annotation(self, mode):
     def on_upload_finished(success, error_msg):
         progress_dialog.close()
         if success:
-            # update and refresh the current canvas
-            self.load_file(self.filename)
+            _refresh_after_annotation_upload(self)
 
             popup = Popup(
                 self.tr(f"Uploading annotations successfully!"),
@@ -1336,8 +1350,7 @@ def upload_voc_annotation(self, mode):
         )
         popup.show_popup(self, popup_height=65, position="center")
 
-        # update and refresh the current canvas
-        self.load_file(self.filename)
+        _refresh_after_annotation_upload(self)
 
     except Exception as e:
         progress_dialog.close()
@@ -1571,7 +1584,7 @@ def upload_yolo_annotation(self, mode, LABEL_OPACITY):
                 break
 
         progress_dialog.close()
-        self.load_file(self.filename)
+        _refresh_after_annotation_upload(self)
         popup = Popup(
             self.tr("Upload completed successfully!"),
             self,
@@ -1946,7 +1959,6 @@ def upload_image_flags_file(self):
             self.load_flags({k: False for k in self.image_flags})
         self.flag_dock.show()
 
-        # update and refresh the current canvas
         self.load_file(self.filename)
 
         popup = Popup(

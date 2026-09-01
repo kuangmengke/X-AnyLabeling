@@ -8,7 +8,7 @@
 
 ## Usage
 
-<img src=".data/GeCo.gif" width="100%" />
+<img src="../geco2/.data/demo.gif" width="100%" />
 
 1. Load an image with `Ctrl+I`, an image directory with `Ctrl+U`, or a video with `Ctrl+O`.
 

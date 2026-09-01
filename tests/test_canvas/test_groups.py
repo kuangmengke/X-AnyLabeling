@@ -90,14 +90,16 @@ class TestCanvasGroups(unittest.TestCase):
 
     def test_group_label_keeps_fixed_screen_font_and_touches_frame(self):
         shape = self.make_shape(20, 30, 40, 50)
+        self.canvas.label_font_size = 12
         self.canvas.scale = 3.0
         group_rect = self.canvas._group_rect([shape])
         label_rect = self.canvas._group_label_rect(3, 1, group_rect)
 
         self.assertAlmostEqual(
             self.canvas._group_label_font().pointSizeF() * self.canvas.scale,
-            8.0,
+            12.0,
         )
+        self.assertEqual(self.canvas.label_font_size, 12)
         self.assertEqual(label_rect.bottom(), group_rect.top())
 
     def test_shape_label_keeps_fixed_screen_size_while_zooming(self):
@@ -127,6 +129,59 @@ class TestCanvasGroups(unittest.TestCase):
             widths.append(pixels[-1] - pixels[0] + 1)
 
         self.assertEqual(widths[0], widths[1])
+
+    def test_shape_label_uses_configured_font_size(self):
+        shape = self.make_shape(20, 30, 30, 40, group_id=None)
+        shape.label = "dense_object_label"
+        shape.line_color = QtGui.QColor("#FF00FF")
+        self.canvas.shapes = [shape]
+        self.canvas.show_groups = False
+        self.canvas.show_texts = False
+        self.canvas.show_masks = False
+        self.canvas.show_attributes = False
+        self.canvas.cross_line_show = False
+        self.canvas.show()
+
+        label_pixels = []
+        for font_size in (8, 16):
+            self.canvas.label_font_size = font_size
+            self.canvas.update()
+            self.app.processEvents()
+            image = self.canvas.grab().toImage()
+            label_pixels.append(
+                sum(
+                    image.pixelColor(x, y) == shape.line_color
+                    for y in range(image.height())
+                    for x in range(image.width())
+                )
+            )
+
+        self.assertGreater(label_pixels[1], label_pixels[0])
+
+    def test_visualization_uses_configured_label_font_size(self):
+        shape = self.make_shape(20, 30, 30, 40, group_id=None)
+        shape.label = "dense_object_label"
+        shape.line_color = QtGui.QColor("#FF00FF")
+
+        label_pixels = []
+        for font_size in (8, 16):
+            self.canvas.label_font_size = font_size
+            image = self.canvas.render_visualization(
+                self.canvas.pixmap,
+                [shape],
+                show_groups=False,
+                show_texts=False,
+                show_masks=False,
+            )
+            label_pixels.append(
+                sum(
+                    image.pixelColor(x, y) == shape.line_color
+                    for y in range(image.height())
+                    for x in range(image.width())
+                )
+            )
+
+        self.assertGreater(label_pixels[1], label_pixels[0])
 
     def test_group_border_selects_all_members(self):
         first = self.make_shape(20, 20, 40, 40)

@@ -36,6 +36,8 @@ You can tweak the settings in [rexomni.yaml](https://github.com/CVHub520/X-AnyLa
 
 Rex-Omni supports multiple vision tasks. Select the desired task from the task dropdown in the X-AnyLabeling interface.
 
+<img src=".data/demo.png" width="100%" />
+
 ### Object Detection
 
 The **Detection** task detects objects and returns bounding boxes based on text prompts.

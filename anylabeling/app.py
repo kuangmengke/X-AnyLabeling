@@ -58,6 +58,28 @@ def get_default_qt_platform():
     return None
 
 
+def build_startup_banner(colorize):
+    orange = "38;2;247;134;64"
+    coral = "38;2;243;101;94"
+    teal = "38;2;35;104;122"
+    purple = "38;2;139;88;125"
+    logo = (
+        f"{colorize('██▄', orange)}  {colorize('▄██', coral)}",
+        f"  {colorize('▀█', orange)}{colorize('█▀', coral)}  ",
+        f"  {colorize('▄█', teal)}{colorize('█▄', purple)}  ",
+        f"{colorize('██▀', teal)}  {colorize('▀██', purple)}",
+    )
+    details = (
+        "Anylabeling",
+        f"Version  {__version__}",
+        f"Docs     {__url__}",
+        "Github   https://github.com/CVHub520/X-AnyLabeling",
+    )
+    return "\n".join(
+        f"{logo_line} {detail}" for logo_line, detail in zip(logo, details)
+    )
+
+
 def main():
     multiprocessing.freeze_support()
 
@@ -257,7 +279,8 @@ def main():
 
     from anylabeling.views.mainwindow import MainWindow
     from anylabeling.views.labeling.logger import logger
-    from anylabeling.views.labeling.utils import new_icon, gradient_text
+    from anylabeling.views.labeling.utils import new_icon
+    from anylabeling.views.labeling.utils.general import format_color
     from anylabeling.views.labeling.utils.theme import (
         init_theme,
         get_app_stylesheet,
@@ -308,10 +331,8 @@ def main():
     qt_platform = config_from_args.pop("qt_platform", None)
 
     logger.setLevel(getattr(logging, logger_level.upper()))
-    logger.info(
-        f"🚀 {gradient_text(f'X-AnyLabeling v{__version__} launched!')}"
-    )
-    logger.info(f"⭐ If you like it, give us a star: {__url__}")
+    for banner_line in build_startup_banner(format_color).splitlines():
+        logger.info(banner_line)
     if qt_platform:
         os.environ["QT_QPA_PLATFORM"] = qt_platform
         logger.info(f"🖥️ Using Qt platform: {qt_platform}")

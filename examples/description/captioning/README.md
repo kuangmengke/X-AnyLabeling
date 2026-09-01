@@ -2,6 +2,8 @@
 
 ## Overview
 
+<img src=".data/annotated-image-description.png" width="100%" />
+
 X-AnyLabeling supports image-captioning workflows through its Chatbot and visual question answering tools. Both tools can send the current image to a vision-language model and store or export the generated description for review.
 
 ## Workflow

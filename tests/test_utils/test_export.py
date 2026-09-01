@@ -9,6 +9,7 @@ from PyQt6 import QtWidgets
 from anylabeling.views.labeling.utils.export import (
     _export_mask_files,
     _show_yolo_export_error,
+    _validate_yolo_export_path,
     export_yolo_annotation,
 )
 from anylabeling.views.labeling.label_converter import (
@@ -199,6 +200,146 @@ def test_yolo_export_reports_failed_image(tmp_path):
     app.processEvents()
 
 
+@pytest.mark.parametrize("mode", ["hbb", "obb", "seg", "pose"])
+def test_yolo_export_preserves_nested_directories(tmp_path, mode):
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    image_dir = tmp_path / "images"
+    first_image = image_dir / "first" / "image.png"
+    second_image = image_dir / "second" / "image.png"
+    for image_file in (first_image, second_image):
+        image_file.parent.mkdir(parents=True, exist_ok=True)
+        image_file.touch()
+        image_file.with_suffix(".json").touch()
+    config_file = tmp_path / ("pose.yaml" if mode == "pose" else "classes.txt")
+    config_file.write_text(
+        "classes:\n  person:\n    - nose\n" if mode == "pose" else "person\n",
+        encoding="utf-8",
+    )
+
+    widget = QtWidgets.QWidget()
+    widget.filename = str(first_image)
+    widget.image_list = [str(first_image), str(second_image)]
+    widget.last_open_dir = str(image_dir)
+    widget.output_dir = None
+    widget.may_continue = mock.Mock(return_value=True)
+    converter = mock.Mock()
+    converter.custom_to_yolo.return_value = False
+    converter.read_json.return_value = {
+        "imageWidth": 100,
+        "imageHeight": 100,
+        "shapes": [],
+    }
+
+    with (
+        mock.patch.object(
+            QtWidgets.QFileDialog,
+            "getOpenFileName",
+            return_value=(str(config_file), ""),
+        ),
+        mock.patch.object(QtWidgets.QDialog, "exec", return_value=1),
+        mock.patch.object(
+            QtWidgets.QCheckBox, "isChecked", side_effect=(True, False)
+        ),
+        mock.patch(
+            "anylabeling.views.labeling.utils.export.LabelConverter",
+            return_value=converter,
+        ),
+        mock.patch("anylabeling.views.labeling.utils.export.Popup"),
+    ):
+        export_yolo_annotation(widget, mode)
+
+    save_path = tmp_path / "labels"
+    expected_calls = [
+        mock.call(
+            str(first_image.with_suffix(".json")),
+            str(save_path / "first" / "image.txt"),
+            mode,
+            skip_empty_files=False,
+            obb_boundary_policy="keep",
+        ),
+        mock.call(
+            str(second_image.with_suffix(".json")),
+            str(save_path / "second" / "image.txt"),
+            mode,
+            skip_empty_files=False,
+            obb_boundary_policy="keep",
+        ),
+    ]
+    assert converter.custom_to_yolo.call_args_list == expected_calls
+    assert (save_path / "first").is_dir()
+    assert (save_path / "second").is_dir()
+    assert (save_path / "first" / "image.png").is_file()
+    assert (save_path / "second" / "image.png").is_file()
+    widget.close()
+    app.processEvents()
+
+
+def test_yolo_export_rejects_conflicting_label_paths(tmp_path):
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    image_dir = tmp_path / "images"
+    image_dir.mkdir()
+    first_image = image_dir / "image.jpg"
+    second_image = image_dir / "image.png"
+    first_image.touch()
+    second_image.touch()
+    classes_file = tmp_path / "classes.txt"
+    classes_file.write_text("person\n", encoding="utf-8")
+
+    widget = QtWidgets.QWidget()
+    widget.filename = str(first_image)
+    widget.image_list = [str(first_image), str(second_image)]
+    widget.last_open_dir = str(image_dir)
+    widget.output_dir = None
+    widget.may_continue = mock.Mock(return_value=True)
+    converter = mock.Mock()
+
+    with (
+        mock.patch.object(
+            QtWidgets.QFileDialog,
+            "getOpenFileName",
+            return_value=(str(classes_file), ""),
+        ),
+        mock.patch.object(QtWidgets.QDialog, "exec", return_value=1),
+        mock.patch(
+            "anylabeling.views.labeling.utils.export.LabelConverter",
+            return_value=converter,
+        ),
+        mock.patch(
+            "anylabeling.views.labeling.utils.export._show_yolo_export_error"
+        ) as show_export_error,
+    ):
+        export_yolo_annotation(widget, "hbb")
+
+    show_export_error.assert_called_once()
+    parent, image_file, error = show_export_error.call_args.args
+    assert parent is widget
+    assert image_file is None
+    assert isinstance(error, ValueError)
+    assert str(first_image) in str(error)
+    assert str(second_image) in str(error)
+    converter.custom_to_yolo.assert_not_called()
+    assert not (tmp_path / "labels").exists()
+    widget.close()
+    app.processEvents()
+
+
+@pytest.mark.parametrize("relative_path", [".", "nested", ".."])
+def test_yolo_export_rejects_paths_overlapping_source(tmp_path, relative_path):
+    source_root = tmp_path / "images"
+    source_root.mkdir()
+    save_path = source_root / relative_path
+
+    with pytest.raises(ValueError):
+        _validate_yolo_export_path(str(source_root), str(save_path))
+
+
+def test_yolo_export_accepts_sibling_path(tmp_path):
+    source_root = tmp_path / "images"
+    source_root.mkdir()
+
+    _validate_yolo_export_path(str(source_root), str(tmp_path / "labels"))
+
+
 @pytest.mark.parametrize(
     ("error", "guidance"),
     [
@@ -214,7 +355,7 @@ def test_yolo_export_reports_failed_image(tmp_path):
             "configuration.\nPlease ensure that the bounding box label is "
             "listed under classes in the pose YAML file.",
         ),
-        (RuntimeError("Unexpected error"), None),
+        (RuntimeError("Unexpected error"), "Reason: Unexpected error"),
     ],
 )
 def test_yolo_export_error_dialog_shows_actionable_guidance(

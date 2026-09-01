@@ -60,9 +60,7 @@ def generate_notes(tag: str, repository: str) -> str:
         f"https://github.com/{repository}/compare/{previous_tag}...{tag}"
     )
     return (
-        "> PyPI: https://pypi.org/project/x-anylabeling-cvhub/\n"
-        "> Baidu Cloud: "
-        "https://pan.baidu.com/s/1pgaw02inCvbEgOme9ajDJA?pwd=e528\n\n"
+        "> PyPI: https://pypi.org/project/x-anylabeling-cvhub/\n\n"
         "> [!NOTE]\n"
         "> Due to compatibility issues across different systems, if the "
         "precompiled version doesn’t work properly on your machine, you can "

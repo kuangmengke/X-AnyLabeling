@@ -27,8 +27,6 @@ After drawing the text boxes, fill in the following fields in the label editing 
 
 ### Relation Extraction
 
-![](.data/annotated_ppocr_kie_toturial.gif)
-
 For the RE task, in addition to the SER fields, you need to fill in two more fields:
 - `group_id`: A unique identifier for each text box within an image.
 - `linking`: Links questions to their corresponding answers, identified by `group_id`.

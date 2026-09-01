@@ -110,6 +110,8 @@ source .venv-cu13/bin/activate     # Linux
 
 ### 1.2 安装
 
+![](../../assets/terminal_launch.gif)
+
 #### 1.2.1 Pip 安装
 
 您可以通过以下命令安装 X-AnyLabeling 的最新稳定版本（推荐使用 `uv pip`）：

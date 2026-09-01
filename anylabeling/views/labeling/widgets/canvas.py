@@ -87,6 +87,7 @@ class Canvas(
     _fill_drawing = False
 
     def __init__(self, *args, **kwargs):
+        self.label_font_size = kwargs.pop("label_font_size", 8)
         self.epsilon = kwargs.pop("epsilon", 10.0)
         self.double_click = kwargs.pop("double_click", "close")
         if self.double_click not in [None, "close"]:
@@ -1430,9 +1431,8 @@ class Canvas(
                     else shape.line_color
                 )
                 pen = QtGui.QPen(outline_color)
-                pen.setWidth(
-                    max(1, int(round(shape.line_width / Shape.scale)))
-                )
+                pen.setWidthF(float(shape.line_width))
+                pen.setCosmetic(True)
                 if getattr(shape, "difficult", False):
                     pen.setStyle(Qt.PenStyle.DashLine)
                 p.setPen(pen)
@@ -1489,7 +1489,7 @@ class Canvas(
         _, handle, _ = geometry
         scale = max(self.scale, 1e-6)
         vertex_radius = Shape.point_size / (2.0 * scale)
-        vertex_pen_width = max(1.0 / scale, float(shape.line_width) / scale)
+        vertex_pen_width = float(shape.line_width) / scale
         radius = vertex_radius + vertex_pen_width / 2.0
         hovered = shape in (self.h_rotation_shape, self._rotation_drag_shape)
         ring_width = (vertex_pen_width / 2.0) * (2.2 if hovered else 1.0)
@@ -3107,7 +3107,7 @@ class Canvas(
 
     def _group_label_font(self):
         font = QtGui.QFont("Arial")
-        font.setPointSizeF(8.0 / self.scale)
+        font.setPointSizeF(self.label_font_size / self.scale)
         return font
 
     def _group_label_rect(self, group_id, shape_count, group_rect):
@@ -4167,9 +4167,8 @@ class Canvas(
                     else shape.line_color
                 )
                 pen = QtGui.QPen(outline_color)
-                pen.setWidth(
-                    max(1, int(round(shape.line_width / Shape.scale)))
-                )
+                pen.setWidthF(float(shape.line_width))
+                pen.setCosmetic(True)
                 if shape.difficult:
                     pen.setStyle(Qt.PenStyle.DashLine)
                 p.setPen(pen)
@@ -4272,9 +4271,8 @@ class Canvas(
                     else self.current.line_color
                 )
                 pen = QtGui.QPen(color)
-                pen.setWidth(
-                    max(1, int(round(self.current.line_width / Shape.scale)))
-                )
+                pen.setWidthF(float(self.current.line_width))
+                pen.setCosmetic(True)
                 p.setPen(pen)
                 p.setBrush(Qt.BrushStyle.NoBrush)
                 p.drawLine(QtCore.QLineF(self.line[1], self.current.points[0]))
@@ -4377,7 +4375,7 @@ class Canvas(
             label_transform = p.transform()
             p.save()
             p.resetTransform()
-            p.setFont(QtGui.QFont("Arial", 8))
+            p.setFont(QtGui.QFont("Arial", self.label_font_size))
             labels = []
             for shape in self.shapes:
                 if not shape.visible:
@@ -4500,20 +4498,17 @@ class Canvas(
 
         # Draw mouse coordinates
         if self.cross_line_show:
-            pen = QtGui.QPen(
-                QtGui.QColor(self.cross_line_color),
-                max(1, int(round(self.cross_line_width / Shape.scale))),
-                Qt.PenStyle.DashLine,
-            )
+            pen = self._cross_line_pen()
+            rect = self._cross_line_rect()
             p.setPen(pen)
             p.setOpacity(self.cross_line_opacity)
             p.drawLine(
-                QtCore.QPointF(self.prev_move_point.x(), 0),
-                QtCore.QPointF(self.prev_move_point.x(), self.pixmap.height()),
+                QtCore.QPointF(self.prev_move_point.x(), rect.top()),
+                QtCore.QPointF(self.prev_move_point.x(), rect.bottom()),
             )
             p.drawLine(
-                QtCore.QPointF(0, self.prev_move_point.y()),
-                QtCore.QPointF(self.pixmap.width(), self.prev_move_point.y()),
+                QtCore.QPointF(rect.left(), self.prev_move_point.y()),
+                QtCore.QPointF(rect.right(), self.prev_move_point.y()),
             )
 
         # Draw attributes
@@ -4748,7 +4743,9 @@ class Canvas(
         show_masks=True,
     ):
         old_shape_scale = Shape.scale
-        scratch = type(self)(parent=self.parent)
+        scratch = type(self)(
+            parent=self.parent, label_font_size=self.label_font_size
+        )
         scratch.resize(pixmap.size())
         scratch.pixmap = pixmap
         scratch.shapes = list(shapes)
@@ -5462,6 +5459,19 @@ class Canvas(
         self.cross_line_color = color
         self.cross_line_opacity = opacity
         self.update()
+
+    def _cross_line_pen(self) -> QtGui.QPen:
+        pen = QtGui.QPen(QtGui.QColor(self.cross_line_color))
+        pen.setWidthF(float(self.cross_line_width))
+        pen.setStyle(Qt.PenStyle.DashLine)
+        pen.setCosmetic(True)
+        return pen
+
+    def _cross_line_rect(self) -> QtCore.QRectF:
+        return QtCore.QRectF(
+            self.transform_pos(QtCore.QPointF()),
+            self.transform_pos(QtCore.QPointF(self.width(), self.height())),
+        )
 
     def gen_new_group_id(self):
         """Generate new shape's group_id based on current shapes"""

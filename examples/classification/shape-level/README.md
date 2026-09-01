@@ -6,8 +6,7 @@
 
 **Multi-task Classification** involves training a model to perform multiple classification tasks simultaneously. For example, a model could be trained to classify both the type of person and vehicle attributes in a single image.
 
-<img src=".data/annotated_person_attributes.png" width="100%" />
-<img src=".data/annotated_vehicle_attributes.png" width="100%" />
+<img src=".data/annotated_attributes.png" width="100%" />
 
 ### Usage
 
@@ -114,9 +113,6 @@ For detailed output examples, refer to [this file](./sources/multi-task/elon-mus
 ## Multiclass & Multilabel Classification
 
 As with [image-level classification](../image-level/README.md), shape-level annotations support multiclass and multilabel flags.
-
-<img src=".data/annotated_person_flags.png" width="100%" />
-<img src=".data/annotated_helmet_flags.png" width="100%" />
 
 ## Usage
 

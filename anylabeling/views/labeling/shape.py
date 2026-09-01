@@ -437,8 +437,8 @@ class Shape:
                 self.select_line_color if self.selected else self.line_color
             )
             pen = QtGui.QPen(color)
-            # Try using integer sizes for smoother drawing(?)
-            pen.setWidth(max(1, int(round(self.line_width / self.scale))))
+            pen.setWidthF(float(self.line_width))
+            pen.setCosmetic(True)
             if self.difficult and self.shape_type != "point":
                 pen.setStyle(QtCore.Qt.PenStyle.DashLine)
             painter.setPen(pen)
@@ -532,9 +532,8 @@ class Shape:
                 painter.drawPath(back_path)
                 painter.setPen(pen)
                 orient_pen = QtGui.QPen(QtGui.QColor(255, 165, 0, 220))
-                orient_pen.setWidth(
-                    max(1, int(round(self.line_width / self.scale)))
-                )
+                orient_pen.setWidthF(float(self.line_width))
+                orient_pen.setCosmetic(True)
                 painter.setPen(orient_pen)
                 painter.drawLine(self.points[0], self.points[1])
                 painter.setPen(pen)
@@ -599,7 +598,8 @@ class Shape:
                     else self.line_color
                 )
                 pen = QtGui.QPen(outline_color)
-                pen.setWidth(max(1, int(round(self.line_width / self.scale))))
+                pen.setWidthF(float(self.line_width))
+                pen.setCosmetic(True)
                 painter.setPen(pen)
                 painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
                 painter.drawEllipse(
@@ -628,7 +628,8 @@ class Shape:
 
         color = QtGui.QColor(0, 0, 0)
         pen = QtGui.QPen(color)
-        pen.setWidth(max(1, int(round(self.line_width / self.scale))))
+        pen.setWidthF(float(self.line_width))
+        pen.setCosmetic(True)
         painter.setPen(pen)
         painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
 

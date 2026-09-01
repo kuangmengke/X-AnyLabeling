@@ -7,7 +7,7 @@
 
 ## Usage
 
-![](.data/annotated_ocr_recognition.gif)
+![](.data/annotated_ocr_recognition.png)
 
 Currently, X-AnyLabeling supports both manual and automatic annotation of the PP-OCR dataset.
 

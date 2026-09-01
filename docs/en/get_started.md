@@ -110,6 +110,8 @@ source .venv-cu13/bin/activate     # Linux
 
 ### 1.2 Installation
 
+![](../../assets/terminal_launch.gif)
+
 #### 1.2.1 Pip Installation
 
 You can install the latest stable version of X-AnyLabeling with the following commands (using `uv pip` is recommended):

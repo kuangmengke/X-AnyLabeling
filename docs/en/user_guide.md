@@ -22,6 +22,7 @@ This guide provides comprehensive instructions for using X-AnyLabeling, covering
       * [3.4 Crosshair Customization](#34-crosshair-customization)
       * [3.5 Navigator](#35-navigator)
       * [3.6 Compare View](#36-compare-view)
+      * [3.7 Image Tags](#37-image-tags)
    * [4. Annotation Formats (Import/Export)](#4-annotation-formats-importexport)
       * [4.1 YOLO Format](#41-yolo-format)
       * [4.2 VOC Format](#42-voc-format)
@@ -117,6 +118,7 @@ Label files are saved in `*.json` format in the same directory as the images by 
 {
   "version": "${version}", // X-AnyLabeling version
   "flags": {},             // Image-level flags (if any)
+  "tags": ["a", "b", "c"], // Ordered image-level open-vocabulary tags
   "shapes": [              // List of annotated shapes
     {
       "label": "${label}",        // Category label
@@ -210,8 +212,17 @@ You can create the following shape types using the tools in the left toolbar, th
 
 In addition, X-AnyLabeling supports two assisted ways to create polygon objects:
 
-- **Brush Polygon** (`Ctrl+N`): Click to set the starting point, then move the cursor along the object boundary to add vertices automatically. Returning near the starting point closes the contour and creates a `polygon`.
-- **Magic Wand** (`Shift+W`): Press and hold the left mouse button on the target to preview a color-similar region connected to the starting pixel, then drag in any direction to increase the color tolerance. Releasing the left button keeps the preview without creating an annotation; right-click to confirm it as a `polygon`, or press `Esc` to cancel.
+**Brush Polygon** (`Ctrl+N`): Click to set the starting point, then move the cursor along the object boundary to add vertices automatically. Returning near the starting point closes the contour and creates a `polygon`.
+
+<p align="center">
+  <img src="../../assets/resources/brush_polygon.gif" alt="Creating a polygon by tracing its boundary in Brush Polygon mode">
+</p>
+
+**Magic Wand** (`Shift+W`): Press and hold the left mouse button on the target to preview a color-similar region connected to the starting pixel, then drag in any direction to increase the color tolerance. Releasing the left button keeps the preview without creating an annotation; right-click to confirm it as a `polygon`, or press `Esc` to cancel.
+
+<p align="center">
+  <img src="../../assets/resources/magic_wand.gif" alt="Creating a polygon from a connected color-similar region with the Magic Wand">
+</p>
 
 ### 2.2 Editing Shapes
 
@@ -220,7 +231,15 @@ X-AnyLabeling provides two shape interaction modes:
 - **Drawing Mode** allows rapid creation of new shapes.
 - **Editing Mode** enables operations such as undo (`Ctrl+Z`), copy (`Ctrl+C`), paste (`Ctrl+V`), delete (`Delete`), move, resize, and rotate.
 
-Press `Ctrl+J` to quickly switch between Drawing and Editing modes. Additional object-specific operations:
+Press `Ctrl+J` to quickly switch between Drawing and Editing modes.
+
+In Editing Mode, click a shape on the canvas to select it. Its outline and control points are highlighted, and the corresponding entry is selected in the **Shapes** panel, making it easier to identify the active object in crowded scenes.
+
+<p align="center">
+  <img src="../../assets/resources/canvas_shape_selection.gif" alt="Selecting different annotation shapes directly on a crowded canvas">
+</p>
+
+Additional object-specific operations:
 
 To protect completed annotations, select one or more shapes and check **Lock Shape** in the canvas right-click menu. You can also right-click selected items in the **Shapes** panel to invert each item's lock state; locked items display a lock icon. Locked shapes remain selectable and allow label and attribute edits, while geometry changes and deletion are disabled.
 
@@ -236,9 +255,19 @@ Additionally, you can quickly copy the coordinates of any selected shape to your
 When drawing a shape on a zoomed canvas with scrollbars, hold `Space` and drag with the left mouse button to temporarily pan the canvas without leaving Drawing Mode.
 
 > [!TIP]
-> X-AnyLabeling provides two convenient shape navigation features:
-> - **Loop Through Objects** (Ctrl+Shift+N): Sequentially zoom in on each shape in the canvas for detailed inspection of annotation quality.
-> - **Loop Select Objects** (Ctrl+Shift+C): Sequentially select each shape in the canvas for quick editing or management of annotations.
+> When an image contains many shapes, use the following navigation tools to review them one by one without manually locating each shape.
+
+**Loop Through Objects** (`Ctrl+Shift+N`) centers and zooms in on each shape in sequence. Use it to inspect boundaries, vertices, and other annotation details. Trigger the command again to advance to the next shape.
+
+<p align="center">
+  <img src="../../assets/resources/zoom_shapes.gif" alt="Loop through shapes by centering and zooming in on each one">
+</p>
+
+**Loop Select Objects** (`Ctrl+Shift+C`) selects each shape in sequence while keeping the current canvas view. Use it to review or edit labels, attributes, and other shape properties efficiently. Trigger the command again to select the next shape.
+
+<p align="center">
+  <img src="../../assets/resources/loop_shapes.gif" alt="Loop through shapes by selecting each one in sequence">
+</p>
 
 ### 2.3 Editing Labels
 
@@ -324,18 +353,29 @@ To maintain the current zoom level when switching between images, enable `View` 
 
 ### 3.2 Image Display
 
-<p align="center">
-  <img src="../../assets/resources/brightness_contrast.png" alt="Brightness-Contrast">
-</p>
-
 X-AnyLabeling allows you to adjust the appearance of the current image and the visibility of annotations:
 
-- Select `View` > `Brightness Contrast` to open the adjustment controls.
-- To apply the current adjustments to all subsequent images in the session, enable `View` > `Keep Current Brightness` and `View` > `Keep Current Contrast`.
+Use the collapsible **Canvas Display** panel at the bottom-left of the canvas to adjust annotation opacity and the appearance of the underlying image. Click the caret button to collapse or expand the panel.
 
-Use the collapsible **Canvas Display** panel at the bottom-left of the canvas to quickly adjust annotation opacity and image brightness or contrast. **Opacity** affects annotation shapes and masks while keeping label text fully visible; **Brightness** and **Contrast** adjust the underlying image. Click the caret button to collapse or expand the panel.
+**Annotation opacity:** Drag the **Opacity** slider to make annotation shapes and masks more or less transparent. Label text remains fully visible so that categories are still easy to identify.
 
-The status bar at the bottom displays the current filename, annotation progress (e.g., "Image 5/100"), and cursor coordinates.
+<p align="center">
+  <img src="../../assets/resources/annotation_opacity.gif" alt="Adjusting annotation shape and mask opacity from the Canvas Display panel">
+</p>
+
+**Image brightness:** Drag the **Brightness** slider to lighten or darken the underlying image without modifying the image file or annotation data.
+
+<p align="center">
+  <img src="../../assets/resources/image_brightness.gif" alt="Adjusting image brightness from the Canvas Display panel">
+</p>
+
+**Image contrast:** Drag the **Contrast** slider to increase or reduce tonal separation in the underlying image, which can make object boundaries easier to distinguish.
+
+<p align="center">
+  <img src="../../assets/resources/image_contrast.gif" alt="Adjusting image contrast from the Canvas Display panel">
+</p>
+
+To apply the current adjustments to all subsequent images in the session, enable `View` > `Keep Current Brightness` and `View` > `Keep Current Contrast`.
 
 ### 3.3 Shape Display
 
@@ -353,13 +393,15 @@ When you hover over a shape, its dimensions (width and height) are displayed in 
 
 ### 3.4 Crosshair Customization
 
-<p align="center">
-  <img src="../../assets/resources/crosshair.png" alt="Crosshair Customization">
-</p>
+Press `Ctrl+0` to open `Settings`, then go to `Canvas > Interaction > Crosshair` to show or hide the crosshair and configure its width, color, and opacity.
 
-You can customize the appearance (width, transparency, color) of the crosshair cursor via `View` > `Set Crosshair`. The status bar shows the cursor's real-time pixel coordinates.
+The crosshair spans the visible canvas and intersects at the cursor position. As the cursor moves, the status bar displays its pixel coordinates in real time.
 
 ### 3.5 Navigator
+
+<p align="center">
+  <img src="../../assets/resources/navigator.png" alt="Crosshair Customization">
+</p>
 
 The navigator helps you quickly navigate to any area of high-resolution images.
 
@@ -374,24 +416,35 @@ This feature is particularly useful when working with ultra-high resolution imag
 ### 3.6 Compare View
 
 <p align="center">
-  <img src="../../assets/resources/compare_view.png" alt="Compare-View">
+  <img src="../../assets/resources/compare_view.gif" alt="Compare-View">
 </p>
 
-X-AnyLabeling provides a Compare View feature that allows you to compare two images side-by-side using a split-screen interface. This is particularly useful for:
+Compare View lets you compare two images side by side in a split-screen interface. It is useful for:
 
-- **Infrared + Visible Light**: Comparing thermal and RGB images to identify targets that are clearer in different spectrums.
-- **Mask Preview**: Viewing segmentation results overlaid on the original image in real-time.
-- **Super-Resolution**: Comparing enhanced images with their original versions.
+- **Infrared and visible-light fusion**: Comparing thermal and RGB images to identify targets that are clearer in different spectra.
+- **Mask preview**: Viewing segmentation results overlaid on the original image in real time.
+- **Image super-resolution**: Comparing an enhanced image with the original image.
 
-**How to Use:**
+**How to use:**
 
 1. Open an image directory and load an image.
-2. Click `File` > `Compare View` (or press `Ctrl+Alt+C`) to open the compare directory selector.
-3. Select a directory containing comparison images with matching filenames (same base name, can have different extensions).
-4. Use the slider at the bottom to adjust the split position, or hold `Shift` and scroll the mouse wheel to move the divider.
+2. Select `File` > `Compare View` (or press `Ctrl+Alt+C`) to open the comparison directory selector.
+3. Select the directory containing the comparison image. Its filename must match that of the main image; the base filenames must be the same, but the extensions may differ.
+4. Use the slider at the bottom to adjust the split position, or hold `Shift` while scrolling the mouse wheel to move the divider.
 5. Click the close button (×) on the slider to exit Compare View.
 
-> **Note:** The comparison image must have the same dimensions as the original image. If the sizes do not match, a warning will be displayed in the status bar.
+> [!NOTE]
+> The comparison image must have the same dimensions as the original image, and its filename must match the original filename.
+
+### 3.7 Image Tags
+
+Use `View` > `Image Tags` or press `Ctrl+Shift+T` to show or hide the image tag panel below the canvas.
+
+The image tag panel supports the following operations:
+
+- Click `+` to add a tag. Double-click a tag to edit its text, drag a tag to reorder it, or use the close button to delete it individually.
+- Click `−` to enter batch mode. Select one or more tags, then click `Delete` to remove them at once.
+- Click `C` to copy all tags to the clipboard as a comma-separated list, such as `tag1,tag2,tag3`.
 
 ## 4. Annotation Formats (Import/Export)
 
@@ -489,6 +542,16 @@ Supports importing and exporting semantic segmentation masks as single-channel o
 **Configuration:** Prepare a `*.json` mapping file defining the pixel value (or RGB color) for each class name.
 - Color masks: See [`mask_color_map.json`](../../assets/mask_color_map.json).
 - Grayscale masks: See [`mask_grayscale_map.json`](../../assets/mask_grayscale_map.json).
+
+The optional `label_priority` object controls how overlapping polygons are rasterized. Higher integer values take precedence. Labels omitted from `label_priority` use priority `0`; polygons with the same priority follow annotation layer order, so shapes later in the XLABEL `shapes` array appear on top. Without `label_priority`, annotation layer order alone determines the visible class. Source annotations remain unchanged.
+
+```json
+{
+  "type": "grayscale",
+  "colors": {"Road": 1, "Car": 2, "Person": 3},
+  "label_priority": {"Road": 0, "Car": 10, "Person": 20}
+}
+```
 
 **Importing:**
 1. Select `Import Annotations` > `Import MASK Annotations`.
@@ -651,6 +714,10 @@ You can also use **Tools** > **Save Visualization Image** or **Save Visualizatio
 
 ### 5.3 Label Manager
 
+<p align="center">
+  <img src="../../assets/resources/label_manager.png" alt="Label Manager for renaming, deleting, hiding, and recoloring labels">
+</p>
+
 `X-AnyLabeling` provides tools for managing labels globally across your dataset via `Tools` > `Label Manager`.
 
 **Operations:**
@@ -666,6 +733,10 @@ You can also use **Tools** > **Save Visualization Image** or **Save Visualizatio
 - Visibility settings persist across image switches and take effect after clicking the `Go` button.
 
 ### 5.4 Shape Type Conversion
+
+<p align="center">
+  <img src="../../assets/resources/shape_converter.png" alt="Shape Converter showing the source and target shape types and batch conversion progress">
+</p>
 
 X-AnyLabeling provides a unified **Shape Converter**.
 Open it from **Tools -> Shape Converter**, then select a source shape type and a target shape type to run batch conversion.
@@ -689,6 +760,10 @@ Rules:
 > Some conversions lose rotation angles, exact boundaries, or curve details and cannot be reversed. Back up annotations before batch conversion.
 
 ### 5.5 Digit Shortcut Manager
+
+<p align="center">
+  <img src="../../assets/resources/digit_shortcut_manager.png" alt="Digit Shortcut Manager for assigning drawing modes and default labels to numeric keys">
+</p>
 
 The Digit Shortcut Manager assigns a drawing mode and default label to each numeric key (0–9). Open it from **Tools > Digit Shortcut Manager** or press `Alt+D`.
 
@@ -729,6 +804,10 @@ The Group ID Manager is a batch management feature for group ID fields, allowing
 
 ### 5.7 Shape Manager
 
+<p align="center">
+  <img src="../../assets/resources/shape_manager.png" alt="Shape Manager for batch operations on annotations and selected shapes across a frame range">
+</p>
+
 The Shape Manager handles batch annotation operations for video frame sequences. Access it via **Tools -> Shape Manager** or press **Alt+S**.
 
 Four operation modes are available (mutually exclusive):
@@ -758,6 +837,10 @@ Select `Help` > `About` to view the application version and runtime environment 
 
 ### 6.2 Setting the Language
 
+<p align="center">
+  <img src="../../assets/resources/supported_languages.png" alt="X-AnyLabeling interfaces in Chinese, English, Japanese, and Korean">
+</p>
+
 Select your preferred interface language (`Chinese`, `English`, `Japanese`, or `Korean`) from the `Language` menu.
 
 **Important:** The application will restart automatically after changing the language. Save your work before switching languages to avoid data loss.
@@ -770,6 +853,10 @@ Select your preferred interface language (`Chinese`, `English`, `Japanese`, or `
 - **Windows**: `C:\Users\<YourUsername>\.xanylabelingrc`
 
 Most common options can now be changed directly in `Settings` (`Ctrl+0`), while the configuration file remains useful for manual editing and advanced customization. Close X-AnyLabeling before editing the file manually and restart it afterwards for changes to take effect.
+
+<p align="center">
+  <img src="../../assets/resources/settings_overview.png" alt="Settings pages for shortcuts, general preferences, shape appearance, and canvas behavior">
+</p>
 
 ### 7.1 Keyboard Shortcuts
 
@@ -834,6 +921,7 @@ You can also update shortcuts in the GUI: open Settings with `Ctrl+0`, then edit
 | `Ctrl+m`              | Toggle Mask Display                              | Show/Hide semi-transparent masks for shapes|
 | `Ctrl+l`              | Toggle Label Text Visibility                     | Show/Hide label names on shapes            |
 | `Ctrl+t`              | Toggle Description Text Visibility               | Show/Hide shape descriptions on shapes     |
+| `Ctrl+Shift+t`        | Show/Hide Image Tags Panel                       | Configurable in Settings                   |
 | `Ctrl+k`              | Toggle Linking Display                           | Show/Hide shape linking visualization      |
 | `Ctrl+Shift+l`        | Toggle Attributes Display                        | Show/Hide shape attributes on canvas       |
 | `Ctrl+Shift+s`        | Set Output Directory                             | Change where `.json` files are saved       |
